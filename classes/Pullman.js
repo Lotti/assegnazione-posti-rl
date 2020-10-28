@@ -5,7 +5,7 @@ const cloneDeep = require('lodash.clonedeep');
 const Seat = require('./Seat');
 
 const COLS_PER_ROW = 17 + 7; // seats + spaces per line
-const BONUS_GROUP_POINTS = 10;
+const BONUS_GROUP_POINTS = 200;
 
 class Pullman {
     constructor() {

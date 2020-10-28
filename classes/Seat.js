@@ -6,8 +6,8 @@ const FREE_SEAT_STATE = 1;
 const OFF_SEAT_STATE = 2;
 const BUSY_SEAT_STATE = 3;
 const EMPTY_SEAT_POINTS = 0;
-const BUSY_SEAT_POINTS = 10;
-const OFF_SEAT_POINTS = 5;
+const BUSY_SEAT_POINTS = 50;
+const OFF_SEAT_POINTS = -25;
 
 class Seat {
     constructor(isVoid) {

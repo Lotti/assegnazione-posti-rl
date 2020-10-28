@@ -39,7 +39,7 @@ class Run extends EventEmitter {
      * @returns {number}
      */
     getScore() {
-        return this.pullman.countScore();
+        return this.score;
     }
 
     /**
@@ -48,6 +48,10 @@ class Run extends EventEmitter {
      */
     getPullman() {
         return this.pullman;
+    }
+
+    getBookings() {
+        return this.bookings;
     }
 
     /**
@@ -69,9 +73,12 @@ class Run extends EventEmitter {
      * @private
      */
     async _move(row, col, label) {
-        await this._sleep(1000);
+        await this._sleep(0);
         if (!this.pullman.pickSeat(row, col, label)) {
             this.end('died');
+            this.score = -100;
+        } else {
+            this.score = this.pullman.countScore();
         }
     }
 
@@ -93,7 +100,6 @@ class Run extends EventEmitter {
                 await this._move(output.row, output.col, label);
             }
         }
-
         if (this.isRunning()) {
             await this._loop();
         }
@@ -140,9 +146,9 @@ class Run extends EventEmitter {
         };
     }
 
-    _sleep(millisec) {
+    _sleep(millisecond) {
         return new Promise((resolve) => {
-            setTimeout(() => resolve(), millisec);
+            setTimeout(() => resolve(), millisecond);
         })
     }
 }

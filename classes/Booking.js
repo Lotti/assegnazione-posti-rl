@@ -51,6 +51,10 @@ class Booking {
         }
         return this.bookings[this.pointer];
     }
+
+    toString() {
+        return this.bookings.map((b) => `${b.people}x${b.label}`).join(',');
+    }
 }
 
 module.exports = Booking;

@@ -7,33 +7,39 @@ const Booking = require('./Booking');
 const Run = require('./Run');
 
 const DEBUG = false;
+const SHOW_OFF = 0;
+const SHOW_SIMPLE = 1;
+const SHOW_FULL = 2;
+const SHOW_BEST_AGENT = true;
 
 class Simulation {
     constructor() {
         this.pullman = new Pullman();
+        this.fixedSeed = 1;
         this.fps = 60;
         this.delay = 1000 / this.fps;
-        this.show = true;
+        this.show = SHOW_FULL;
         this.loopInterval = null;
         this.countGeneration = 0;
-        this.maxGeneration = DEBUG ? 1 : 1000;
+        this.maxGeneration = DEBUG ? 2 : 10000;
         this.recordScore = 0;
-        this.maxScore = 0;
+        this.bestScore = 0;
         this.runs = [];
         this.runToDisplay = 0;
         this.running = 0;
-        this.population = DEBUG ? 1 : 30;
+        this.population = DEBUG ? 5 : 50;
+        this.dead = 0;
+        this.winners = 0;
 
         let inputNode = this.pullman.getCells().length; // for pullman cells status
         inputNode += 1; // for group sizing
         const outputNode = 2; // for row, col
 
+        console.log('inputNode', inputNode);
+
         this.net = new NeuroEvolution({
             population: this.population,
-            //TODO sperimentare diverse forme di rete
-            network: [inputNode, [15, 15, 15], outputNode],
-            elitism: 0.3,
-            nbChild: 2
+            network: [inputNode, [100, 50, 25], outputNode],
         });
     }
 
@@ -42,11 +48,7 @@ class Simulation {
      */
     start() {
         log.info('Simulation is starting');
-        this._prepareNewRuns();
-        this.runs.forEach((r) => {
-            r.start();
-            this.running++;
-        });
+        this._runNextGeneration();
 
         this._loop(true);
         this.loopInterval = setInterval(() => {
@@ -62,10 +64,7 @@ class Simulation {
      */
     _loop(first) {
         this._checkScores();
-
-        if (this.show) {
-            this._display(first);
-        }
+        this._display(first);
     }
 
     /**
@@ -82,20 +81,22 @@ class Simulation {
      *
      * @private
      */
-    _prepareNewRuns() {
+    _runNextGeneration() {
         if (this.countGeneration < this.maxGeneration) {
             const gen = this.net.nextGeneration();
-            const booking = new Booking().generate();
-            this.maxScore = 0;
+            const booking = new Booking(this.fixedSeed).generate();
+            this.bestScore = 0;
             this.runToDisplay = 0;
-            this.running = 0;
+            this.dead = 0;
+            this.winners = 0;
             this.runs.forEach((r) => r.removeAllListeners());
             this.runs = [];
             gen.forEach((g, i) => {
                 const r = new Run(g, cloneDeep(this.pullman), cloneDeep(booking));
+                this.runs.push(r);
                 r.once('died', (result) => this._runEnded(result));
                 r.once('finish', (result) => this._runEnded(result));
-                this.runs.push(r);
+                r.start();
             });
             this.countGeneration++;
         } else {
@@ -109,7 +110,7 @@ class Simulation {
      */
     _allRunsEnded() {
         this.runs.forEach((r) => this.net.networkScore(r.getAgent(), r.getScore()));
-        this._prepareNewRuns();
+        this._runNextGeneration();
     }
 
     /**
@@ -119,10 +120,16 @@ class Simulation {
      * @private
      */
     _runEnded({reason, score}) {
-        // log.info(`An agent ${reason} with score: ${score}`);
-        this.running--;
+        switch (reason) {
+            case 'died':
+                this.dead++;
+                break;
+            case 'finish':
+                this.winners++;
+                break;
+        }
 
-        if (this.running === 0) {
+        if (this.dead + this.winners >= this.population) {
             this._allRunsEnded();
         }
     }
@@ -132,11 +139,15 @@ class Simulation {
      * @private
      */
     _checkScores() {
-        this.runs.forEach((r, i) => {
-            if (this._checkBestScore(r.getScore())) {
-                this.runToDisplay = i;
+        if (SHOW_BEST_AGENT) {
+            let best = 0;
+            for (let i = 0; i < this.runs.length; i++) {
+                if (this._checkBestScore(this.runs[i].getScore())) {
+                    best = i;
+                }
             }
-        });
+            this.runToDisplay = best;
+        }
     }
 
     /**
@@ -146,11 +157,12 @@ class Simulation {
      * @private
      */
     _checkBestScore(score) {
-        if (score > this.maxScore) {
-            this.maxScore = score;
-            if (score > this.recordScore) {
-                this.recordScore = score;
-            }
+        if (score > this.recordScore) {
+            this.recordScore = score;
+        }
+
+        if (score > this.bestScore) {
+            this.bestScore = score;
             return true;
         }
         return false;
@@ -162,19 +174,19 @@ class Simulation {
      * @private
      */
     _display(first) {
-        const run = this.runs[this.runToDisplay];
-        const pullmanDisplay = run.getPullman().display();
-        const lines = pullmanDisplay.length + 2;
-        const goUpLines = `\x1b[<${lines}>A`;
-        if (!first) {
-            process.stdout.write(goUpLines);
+        if (this.show) {
+            const run = this.runs[this.runToDisplay];
+            process.stdout.write(`\x1b[2J`); // blank screen
+            process.stdout.write(`Bookings: ${run.getBookings()}\n`);
+            process.stdout.write(`Gen: ${this.countGeneration}/${this.maxGeneration} Agent: ${this.runToDisplay} Running: ${this.population - this.winners - this.dead} Winners: ${this.winners} Dead: ${this.dead}\n`);
+            if (this.show === SHOW_FULL) {
+                const pullmanDisplay = run.getPullman().display();
+                for (const l of pullmanDisplay) {
+                    process.stdout.write(`${l}\n`);
+                }
+            }
+            process.stdout.write(`Score: ${run.getScore()} Best: ${this.bestScore} Record: ${this.recordScore} Free Seats: ${run.getPullman().countFreeSeats()} \n`);
         }
-
-        process.stdout.write(`Gen: ${this.countGeneration}/${this.maxGeneration} Agent: ${this.runToDisplay} Living: ${this.running}/${this.population}\n`);
-        for (const l of pullmanDisplay) {
-            process.stdout.write(`${l}\n`);
-        }
-        process.stdout.write(`Score: ${run.getScore()} Free: ${run.getPullman().countFreeSeats()} Record: ${this.recordScore}\n`);
     }
 }
 
