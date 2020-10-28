@@ -4,7 +4,7 @@
  *
  * @param {options} An object of options for Neuroevolution.
  */
-var Neuroevolution = function (options) {
+module.exports = function (options) {
 	var self = this; // reference to the top scope of this module
 
 	// Declaration of module parameters (options) and default values

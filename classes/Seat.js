@@ -1,74 +1,114 @@
 const log4js = require('log4js');
 const log = log4js.getLogger('Seat');
 
-const EMPTY_SEAT_STATE = 0;
-const BUSY_SEAT_STATE = 1;
+const VOID_SEAT_STATE = 0;
+const FREE_SEAT_STATE = 1;
 const OFF_SEAT_STATE = 2;
-const VOID_STATE = 4;
+const BUSY_SEAT_STATE = 3;
 const EMPTY_SEAT_POINTS = 0;
 const BUSY_SEAT_POINTS = 10;
 const OFF_SEAT_POINTS = 5;
 
-class Void {
-    getState() {
-        return VOID_STATE;
-    }
-
-    isAvailable() {
-        return false;
-    }
-
-    setClear() {
-    }
-
-    setAssign(label) {
-    }
-
-    setOff() {
-    }
-
-    getPoints() {
-        return EMPTY_SEAT_STATE;
-    }
-
-    toString() {
-        return ' ';
-    }
-}
-
-module.exports.Void = Void;
-
-class Seat extends Void {
-    constructor() {
-        super();
-        this.state = EMPTY_SEAT_STATE;
+class Seat {
+    constructor(isVoid) {
+        this.state = isVoid ? VOID_SEAT_STATE : FREE_SEAT_STATE;
         this.label = null;
     }
 
+    /**
+     * get seat possible states
+     * @returns {number[]}
+     */
+    getPossibleStates() {
+        return [VOID_SEAT_STATE, FREE_SEAT_STATE, OFF_SEAT_STATE, BUSY_SEAT_STATE];
+    }
+
+    /**
+     * get seat state
+     * @returns {number}
+     */
     getState() {
         return this.state;
     }
 
-    isAvailable() {
-        return this.state === EMPTY_SEAT_STATE;
+    /**
+     * checks if seat is VOID
+     * @returns {boolean}
+     */
+    isVoid() {
+        return this.state === VOID_SEAT_STATE;
     }
 
-    setClear() {
-        this.state = EMPTY_SEAT_STATE;
+    /**
+     * checks if seat is FREE
+     * @returns {boolean}
+     */
+    isFree() {
+        return this.state === FREE_SEAT_STATE;
     }
 
-    setAssign(label) {
-        this.state = BUSY_SEAT_STATE;
-        this.label = label;
+    /**
+     * checks if seat is OFF
+     * @returns {boolean}
+     */
+    isOff() {
+        return this.state === OFF_SEAT_STATE;
     }
 
-    setOff() {
-       this.state = OFF_SEAT_STATE;
+    /**
+     * checks if seat is BUSY
+     * @returns {boolean}
+     */
+    isBusy() {
+        return this.state === BUSY_SEAT_STATE;
     }
 
+    /**
+     * check if seat can be grouped
+     * @param label
+     * @returns {boolean}
+     */
+    isGroup(label) {
+        return this.label === label;
+    }
+
+    /**
+     * empties seat if not VOID
+     */
+    clear() {
+        if (this.state !== VOID_SEAT_STATE) {
+            this.state = FREE_SEAT_STATE;
+        }
+    }
+
+    /**
+     * assign seat if not VOID
+     * @param label
+     */
+    assign(label) {
+        if (this.state !== VOID_SEAT_STATE) {
+            this.state = BUSY_SEAT_STATE;
+            this.label = label;
+        }
+    }
+
+    /**
+     * set seat OFF if not VOID
+     */
+    off() {
+        if (this.state !== VOID_SEAT_STATE) {
+            this.state = OFF_SEAT_STATE;
+        }
+    }
+
+    /**
+     * gets seat's points
+     * @returns {number}
+     */
     getPoints() {
         switch (this.state) {
-            case EMPTY_SEAT_STATE:
+            case VOID_SEAT_STATE:
+            case FREE_SEAT_STATE:
                 return EMPTY_SEAT_POINTS;
             case BUSY_SEAT_STATE:
                 return BUSY_SEAT_POINTS;
@@ -77,17 +117,24 @@ class Seat extends Void {
         }
     }
 
+    /**
+     *
+     * @returns {string}
+     */
     toString() {
         switch (this.state) {
-            case EMPTY_SEAT_STATE:
+            default:
+            case VOID_SEAT_STATE:
+                return ' ';
+            case FREE_SEAT_STATE:
                 return '_';
             case BUSY_SEAT_STATE:
-                return this.label;
+                return `\x1b[32m${this.label}\x1b[0m`;
             case OFF_SEAT_STATE:
-                return 'X';
+                return '\x1b[41m \x1b[0m';
         }
     }
 }
 
-module.exports.Seat = Seat;
+module.exports = Seat;
 
