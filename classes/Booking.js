@@ -11,11 +11,13 @@ const Chance = require('chance');
  */
 
 class Booking {
+    static LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789¶■§♠♥♦♣@#¥€$%&*abcdefghijklmnopqrstuvwxyz'.split('');
+
     constructor(seed = undefined) {
         this.chance = new Chance(seed);
         this.bookings = [];
         this.pointer = -1;
-        this.labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789¶■§♠♥♦♣@#¥€$%&*abcdefghijklmnopqrstuvwxyz'.split('');
+        this.labels = Booking.LABELS;
     }
 
     /**

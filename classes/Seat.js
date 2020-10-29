@@ -1,17 +1,15 @@
 const log4js = require('log4js');
 const log = log4js.getLogger('Seat');
 
-const VOID_SEAT_STATE = 0;
-const FREE_SEAT_STATE = 1;
-const OFF_SEAT_STATE = 2;
-const BUSY_SEAT_STATE = 3;
-const EMPTY_SEAT_POINTS = 0;
-const BUSY_SEAT_POINTS = 50;
-const OFF_SEAT_POINTS = -25;
-
 class Seat {
+    static VOID_SEAT_STATE = 0;
+    static FREE_SEAT_STATE = 1;
+    static OFF_SEAT_STATE = 2;
+    static BUSY_SEAT_STATE = 3;
+    static ERROR_SEAT_STATE = 4;
+
     constructor(isVoid) {
-        this.state = isVoid ? VOID_SEAT_STATE : FREE_SEAT_STATE;
+        this.state = isVoid ? Seat.VOID_SEAT_STATE : Seat.FREE_SEAT_STATE;
         this.label = null;
     }
 
@@ -20,7 +18,7 @@ class Seat {
      * @returns {number[]}
      */
     getPossibleStates() {
-        return [VOID_SEAT_STATE, FREE_SEAT_STATE, OFF_SEAT_STATE, BUSY_SEAT_STATE];
+        return [Seat.VOID_SEAT_STATE, Seat.FREE_SEAT_STATE, Seat.OFF_SEAT_STATE, Seat.BUSY_SEAT_STATE];
     }
 
     /**
@@ -36,7 +34,7 @@ class Seat {
      * @returns {boolean}
      */
     isVoid() {
-        return this.state === VOID_SEAT_STATE;
+        return this.state === Seat.VOID_SEAT_STATE;
     }
 
     /**
@@ -44,7 +42,7 @@ class Seat {
      * @returns {boolean}
      */
     isFree() {
-        return this.state === FREE_SEAT_STATE;
+        return this.state === Seat.FREE_SEAT_STATE;
     }
 
     /**
@@ -52,7 +50,7 @@ class Seat {
      * @returns {boolean}
      */
     isOff() {
-        return this.state === OFF_SEAT_STATE;
+        return this.state === Seat.OFF_SEAT_STATE;
     }
 
     /**
@@ -60,7 +58,7 @@ class Seat {
      * @returns {boolean}
      */
     isBusy() {
-        return this.state === BUSY_SEAT_STATE;
+        return this.state === Seat.BUSY_SEAT_STATE;
     }
 
     /**
@@ -76,8 +74,8 @@ class Seat {
      * empties seat if not VOID
      */
     clear() {
-        if (this.state !== VOID_SEAT_STATE) {
-            this.state = FREE_SEAT_STATE;
+        if (this.state !== Seat.VOID_SEAT_STATE) {
+            this.state = Seat.FREE_SEAT_STATE;
         }
     }
 
@@ -86,8 +84,8 @@ class Seat {
      * @param label
      */
     assign(label) {
-        if (this.state !== VOID_SEAT_STATE) {
-            this.state = BUSY_SEAT_STATE;
+        if (this.state !== Seat.VOID_SEAT_STATE) {
+            this.state = Seat.BUSY_SEAT_STATE;
             this.label = label;
         }
     }
@@ -96,24 +94,8 @@ class Seat {
      * set seat OFF if not VOID
      */
     off() {
-        if (this.state !== VOID_SEAT_STATE) {
-            this.state = OFF_SEAT_STATE;
-        }
-    }
-
-    /**
-     * gets seat's points
-     * @returns {number}
-     */
-    getPoints() {
-        switch (this.state) {
-            case VOID_SEAT_STATE:
-            case FREE_SEAT_STATE:
-                return EMPTY_SEAT_POINTS;
-            case BUSY_SEAT_STATE:
-                return BUSY_SEAT_POINTS;
-            case OFF_SEAT_STATE:
-                return OFF_SEAT_POINTS;
+        if (this.state !== Seat.VOID_SEAT_STATE) {
+            this.state = Seat.OFF_SEAT_STATE;
         }
     }
 
@@ -123,15 +105,15 @@ class Seat {
      */
     toString() {
         switch (this.state) {
-            default:
-            case VOID_SEAT_STATE:
-                return ' ';
-            case FREE_SEAT_STATE:
+            case Seat.FREE_SEAT_STATE:
                 return '_';
-            case BUSY_SEAT_STATE:
+            case Seat.BUSY_SEAT_STATE:
                 return `\x1b[32m${this.label}\x1b[0m`;
-            case OFF_SEAT_STATE:
+            case Seat.OFF_SEAT_STATE:
                 return '\x1b[41m \x1b[0m';
+            default:
+            case Seat.VOID_SEAT_STATE:
+                return ' ';
         }
     }
 }

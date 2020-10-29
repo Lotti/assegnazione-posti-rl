@@ -3,18 +3,25 @@ const log = log4js.getLogger('Simulation');
 const EventEmitter = require('events');
 
 class Run extends EventEmitter {
+    static BUSY_SEAT_POINTS = 10;
+    static OFF_SEAT_POINTS = 15;
+    static STARTING_SCORE = 10;
+    static ERROR_PENALTY = -1;
+
     /**
      *
+     * @param {number} index
      * @param {object} agent
      * @param {Pullman} pullman
      * @param {Booking} booking
      */
-    constructor(agent, pullman, booking) {
+    constructor(index, agent, pullman, booking) {
         super();
+        this.index = index;
         this.agent = agent;
         this.pullman = pullman;
         this.bookings = booking;
-        this.score = 0;
+        this.score = Run.STARTING_SCORE;
         this.running = false;
     }
 
@@ -59,49 +66,74 @@ class Run extends EventEmitter {
      */
     start() {
         this.running = true;
-        this._loop().catch((error) => {
-            log.error(error);
-            this.end('error');
-        });
+        this._loop();
+    }
+
+    /**
+     * stops run
+     */
+    stop() {
+        this.running = false;
     }
 
     /**
      * Agent move
-     * @param row
-     * @param col
+     * @param i
+     * @param people
      * @param label
      * @private
      */
-    async _move(row, col, label) {
-        await this._sleep(0);
-        if (!this.pullman.pickSeat(row, col, label)) {
-            this.end('died');
-            this.score = -100;
+    _move(i, people, label) {
+        const agentInput = this._getInputsForAgent(i, people, label);
+        const agentOutput = this.agent.compute(agentInput);
+        const output = this._getOutputsFromAgent(agentOutput);
+        const result = this.pullman.pickSeat(output.row, output.col, label);
+        this._scoring(result);
+    }
+
+    /**
+     *
+     * @param error
+     * @param prevSeat
+     * @param currSeat
+     * @private
+     */
+    _scoring({error, prevSeat, currSeat}) {
+        if (error) {
+            this.score += Run.ERROR_PENALTY;
         } else {
-            this.score = this.pullman.countScore();
+            if (currSeat.isBusy()) {
+                this.score += Run.BUSY_SEAT_POINTS;
+                if (prevSeat.isOff()) {
+                    this.score += Run.OFF_SEAT_POINTS;
+                }
+            }
+        }
+
+        if (this.score === 0) {
+            this._end('dead');
         }
     }
+
 
     /**
      * Main loop
      * @private
      */
-    async _loop() {
-        const booking = this.bookings.getNext();
-
-        if (!booking || this.pullman.countFreeSeats() === 0) {
-            this.end('finish');
-        } else {
-            const {people, label} = booking;
-            for (let i = 1; i <= people; i++) {
-                const agentInput = this._getInputsForAgent(i, people, label);
-                const agentOutput = this.agent.compute(agentInput);
-                const output = this._getOutputsFromAgent(agentOutput);
-                await this._move(output.row, output.col, label);
-            }
-        }
+    _loop() {
         if (this.isRunning()) {
-            await this._loop();
+            setImmediate(() => {
+                const booking = this.bookings.getNext();
+                if (!booking || this.pullman.countFreeSeats() === 0) {
+                    this._end('finish');
+                } else {
+                    const {people, label} = booking;
+                    for (let i = 1; i <= people; i++) {
+                        this._move(i, people, label);
+                    }
+                }
+                this._loop();
+            });
         }
     }
 
@@ -109,9 +141,11 @@ class Run extends EventEmitter {
      * ends run
      * @param event
      */
-    end(event) {
-        this.running = false;
-        this.emit(event, {reason: event, score: this.pullman.countScore()});
+    _end(event) {
+        this.stop();
+        setImmediate(() => {
+            this.emit(event, {reason: event, index: this.index, agent: this.agent, score: this.score});
+        });
     }
 
     /**
@@ -128,7 +162,7 @@ class Run extends EventEmitter {
         const normalizedCells = this.pullman.getSeatStatusByLabel(label);
         inputs.push(...normalizedCells);
         // adding current booking info
-        inputs.push(i/people);
+        inputs.push(i / people);
         return inputs;
     }
 
@@ -144,12 +178,6 @@ class Run extends EventEmitter {
             row: Math.floor(agentOutput[0] * rows),
             col: Math.floor(agentOutput[1] * cols),
         };
-    }
-
-    _sleep(millisecond) {
-        return new Promise((resolve) => {
-            setTimeout(() => resolve(), millisecond);
-        })
     }
 }
 

@@ -112,7 +112,18 @@ class Pullman {
                 }
             }
         }
-        return matrix.flat().map((c) => c.getState() * 100 / (c.getPossibleStates().length - 1));
+        return matrix.flat().map((c) => {
+            switch (c.getState()) {
+                default:
+                    throw new Error('Invalid seat state!');
+                case Seat.OFF_SEAT_STATE:
+                case Seat.VOID_SEAT_STATE:
+                case Seat.BUSY_SEAT_STATE:
+                    return 1;
+                case Seat.FREE_SEAT_STATE:
+                    return 0;
+            }
+        });
     }
 
     /**
@@ -134,12 +145,13 @@ class Pullman {
      * @param {number} row
      * @param {number} col
      * @param {string} label
-     * @returns {boolean}
+     * @returns {{seat: Seat, error: boolean}}
+     * @private
      */
     _checkSeat(row, col, label) {
-        const chosenSeat = this.getSeat(row, col);
+        const chosenSeat = cloneDeep(this.getSeat(row, col));
         if (chosenSeat.isFree()) {
-            return true;
+            return {error: false, seat: chosenSeat};
         }
 
         if (chosenSeat.isOff() && label) {
@@ -147,13 +159,12 @@ class Pullman {
             for (const c of coords) {
                 const nearSeat = this.getSeat(c.row, c.col);
                 if (nearSeat && nearSeat.isBusy() && !nearSeat.isGroup(label)) {
-                    return false;
+                    return {error: true, seat: chosenSeat};
                 }
             }
-            this.bonusScore += BONUS_GROUP_POINTS;
-            return true;
+            return {error: false, seat: chosenSeat};
         }
-        return false;
+        return {error: true, seat: chosenSeat};
     }
 
     /**
@@ -161,22 +172,24 @@ class Pullman {
      * @param {number} row
      * @param {number} col
      * @param {string} label
-     * @returns {boolean}
+     * @returns {{prevSeat: Seat, currSeat: Seat, error: boolean}}
      */
     pickSeat(row, col, label) {
-        if (this._checkSeat(row, col, label)) {
-            this.getSeat(row, col).assign(label);
-            const coords = this._getAroundSeatsCoords(row, col);
-            for (const c of coords) {
-                const nearSeat = this.getSeat(c.row, c.col);
-                if (nearSeat && nearSeat.isFree()) {
-                    nearSeat.off();
-                }
-            }
-            return true;
-        } else {
-            return false;
+        const check = this._checkSeat(row, col, label);
+        if (check.error) {
+            return {error: true, prevSeat: check.seat, currSeat: check.seat};
         }
+
+        const seat = this.getSeat(row, col);
+        seat.assign(label);
+        const coords = this._getAroundSeatsCoords(row, col);
+        for (const c of coords) {
+            const nearSeat = this.getSeat(c.row, c.col);
+            if (nearSeat && nearSeat.isFree()) {
+                nearSeat.off();
+            }
+        }
+        return {error: false, prevSeat: check.seat, currSeat: cloneDeep(seat)};
     }
 
     /**
@@ -193,23 +206,6 @@ class Pullman {
      */
     countFreeSeats() {
         return this.seats.filter((s) => s.isFree()).length;
-    }
-
-    /**
-     * get pullman score
-     * @returns {number}
-     */
-    countScore() {
-        const pullmanScore = 0;
-
-        const seatsScore = this.seats.reduce((points = 0, s) => {
-            if (points instanceof Seat) {
-                return points.getPoints() + s.getPoints();
-            }
-            return points + s.getPoints();
-        });
-
-        return seatsScore + pullmanScore + this.bonusScore;
     }
 
     /**
