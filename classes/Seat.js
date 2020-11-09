@@ -8,9 +8,25 @@ class Seat {
     static BUSY_SEAT_STATE = 3;
     static ERROR_SEAT_STATE = 4;
 
-    constructor(isVoid) {
-        this.state = isVoid ? Seat.VOID_SEAT_STATE : Seat.FREE_SEAT_STATE;
+    /**
+     *
+     * @param {number} row
+     * @param {number} col
+     * @param {boolean} isFree
+     */
+    constructor(row, col, isFree) {
+        this.row = row;
+        this.col = col;
+        this.state = isFree ? Seat.FREE_SEAT_STATE : Seat.VOID_SEAT_STATE;
         this.label = null;
+    }
+
+    /**
+     * returns seat coords in row, col
+     * @returns {{col: number, row: number}}
+     */
+    getCoords() {
+        return {row: this.row, col: this.col};
     }
 
     /**
@@ -27,6 +43,15 @@ class Seat {
      */
     getState() {
         return this.state;
+    }
+
+    /**
+     * set seat state
+     * @returns {Seat}
+     */
+    setState(state) {
+        this.state = state;
+        return this;
     }
 
     /**

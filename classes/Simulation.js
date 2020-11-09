@@ -22,22 +22,24 @@ class Simulation {
         this.countGeneration = 0;
         this.recordScore = 0;
         this.bestScore = 0;
-        this.runs = [];
+        this.runs = {};
         this.runToDisplay = 0;
         this.running = 0;
         this.dead = 0;
         this.winners = 0;
 
 
-        let inputNode = this.pullman.getCells().length; // for pullman cells status
+        // let inputNode = this.pullman.getCells().length; // for pullman cells status
+        let inputNode = this.pullman.getSeats().length; // for pullman cells status
         inputNode += 1; // for group sizing
-        const outputNode = 2; // for row, col
+        // const outputNode = 2; // for row, col
+        const outputNode = 1; // for row, col
 
         this.maxGeneration = DEBUG ? 2 : 10000;
         this.population = DEBUG ? 5 : 50;
         this.net = new NeuroEvolution({
             population: this.population,
-            network: [inputNode, [100, 50, 10], outputNode],
+            network: [inputNode, [70, 70, 70], outputNode],
             elitism: 0.2, // Best networks kepts unchanged for the next
             // generation (rate).
             randomBehaviour: 0.2, // New random networks for the next generation
@@ -158,10 +160,9 @@ class Simulation {
     _checkScores() {
         let best = this.runToDisplay;
         this.bestScore = 0;
-        const keys = Object.keys(this.runs);
-        for (const i of keys) {
-            const score = this.runs[i].getScore();
-            if (score > this.bestScore) {
+        for (const [i, r] of Object.entries(this.runs)) {
+            const score = r.getScore();
+            if (score >= this.bestScore) {
                 this.bestScore = score;
                 best = i;
             }
@@ -175,7 +176,7 @@ class Simulation {
      * @private
      */
     _display(first) {
-        if (this.show !== SHOW_OFF && this.howManyRunning() > 0) {
+        if (this.show !== SHOW_OFF && this.runs[this.runToDisplay] && this.howManyRunning() > 0) {
             const run = this.runs[this.runToDisplay];
             process.stdout.write(`\x1b[2J`); // blank screen
             process.stdout.write(`Gen: ${this.countGeneration}/${this.maxGeneration} Agent: ${this.runToDisplay} Running: ${this.howManyRunning()} Winners: ${this.winners} Dead: ${this.dead}\n`);
